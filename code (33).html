@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>识字测试系统 (V16 - 快速响应版)</title>
+    <!-- 引入 SheetJS 库，用于生成 Excel 文件 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* 全局变量 */
+        :root {
+            --primary-color: #007bff;
+            --primary-hover: #0056b3;
+            --success-color: #28a745;
+            --success-hover: #218838;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-bg: #f0f8ff;
+            --text-color: #333;
+            --text-secondary: #6c757d;
+            --border-radius: 8px;
+            --box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+        
+        .container { 
+            width: 90%; 
+            max-width: 600px; 
+            background: white; 
+            padding: 2rem; 
+            border-radius: var(--border-radius); 
+            box-shadow: var(--box-shadow); 
+            text-align: center; 
+            transition: var(--transition);
+        }
+        
+        .hidden { display: none; }
+        
+        h1, h2, h3 { 
+            color: var(--primary-color); 
+            margin-bottom: 1.5rem; 
+        }
+
+        h3 {
+             margin-top: 1.5rem;
+        }
+        
+        button { 
+            padding: 12px 25px; 
+            font-size: 1.2rem; 
+            border: none; 
+            border-radius: var(--border-radius); 
+            background-color: var(--primary-color); 
+            color: white; 
+            cursor: pointer; 
+            transition: var(--transition);
+            margin: 0.25rem;
+        }
+        
+        button:hover { 
+            background-color: var(--primary-hover); 
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled { 
+            background-color: #cccccc; 
+            cursor: not-allowed; 
+            transform: none;
+        }
+        
+        .form-group { 
+            margin-bottom: 1.5rem; 
+        }
+        
+        input[type="text"], input[type="password"] { 
+            width: 80%; 
+            padding: 12px; 
+            font-size: 1.1rem; 
+            border: 1px solid #ccc; 
+            border-radius: var(--border-radius); 
+            transition: var(--transition);
+        }
+        
+        input[type="text"]:focus, input[type="password"]:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+        
+        #login-error, #admin-error { 
+            color: var(--danger-color); 
+            margin-top: 1rem; 
+            min-height: 1.2rem; 
+            font-weight: bold; 
+        }
+        
+        #test-screen #char-display { 
+            font-size: 15rem; 
+            font-weight: bold; 
+            color: var(--text-color); 
+            margin: 2rem 0; 
+            line-height: 1; 
+            font-family: 'KaiTi', '楷体', serif; 
+            transition: var(--transition);
+        }
+        
+        #test-screen #mic-btn { 
+            font-size: 3rem; 
+            width: 100px; 
+            height: 100px; 
+            border-radius: 50%; 
+            background-color: var(--success-color); 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+        
+        #test-screen #mic-btn:hover { 
+            background-color: var(--success-hover); 
+        }
+        
+        #test-screen #status-text { 
+            margin-top: 1.5rem; 
+            font-size: 1.2rem; 
+            color: var(--text-secondary); 
+            min-height: 3.5rem; 
+            line-height: 1.5; 
+        }
+        
+        #test-screen #progress-text { 
+            font-size: 1rem; 
+            color: var(--text-secondary); 
+            margin-top: 1rem;
+        }
+        
+        #report-screen h2 { 
+            color: var(--success-color); 
+        }
+        
+        #report-screen #summary { 
+            font-size: 1.2rem; 
+            margin-bottom: 2rem; 
+            line-height: 1.8; 
+        }
+        
+        #report-screen #error-table { 
+            width: 100%; 
+            margin-top: 1rem; 
+            border-collapse: collapse; 
+        }
+        
+        #report-screen #error-table th, 
+        #report-screen #error-table td { 
+            border: 1px solid #ddd; 
+            padding: 12px; 
+            font-size: 1.1rem; 
+        }
+        
+        #report-screen #error-table th { 
+            background-color: #f2f2f2; 
+            color: var(--text-color); 
+        }
+        
+        #report-screen #no-errors { 
+            color: var(--success-color); 
+            font-size: 1.2rem; 
+            font-weight: bold; 
+        }
+        
+        .btn-success { background-color: var(--success-color); }
+        .btn-success:hover { background-color: var(--success-hover); }
+        .btn-danger { background-color: var(--danger-color); }
+        .btn-danger:hover { background-color: #c82333; }
+        .btn-secondary { background-color: var(--text-secondary); }
+        .btn-secondary:hover { background-color: #5a6268; }
+        .feedback-correct { color: var(--success-color); font-weight: bold; }
+        .feedback-incorrect { color: var(--danger-color); font-weight: bold; }
+        .feedback-warning { color: var(--warning-color); font-weight: bold; }
+        
+        @media (max-width: 768px) {
+            .container { width: 95%; padding: 1.5rem; }
+            #test-screen #char-display { font-size: 10rem; }
+        }
+        @media (max-width: 480px) {
+            #test-screen #char-display { font-size: 8rem; }
+            button { padding: 10px 20px; font-size: 1rem; }
+            #test-screen #mic-btn { width: 80px; height: 80px; font-size: 2.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 学生登录界面 -->
+        <div id="login-screen">
+            <h1>一年级识字测试</h1>
+            <div class="form-group"><input type="text" id="student-id" placeholder="请输入学号"></div>
+            <div class="form-group"><input type="text" id="student-name" placeholder="请输入姓名"></div>
+            <button id="login-btn">开始测试</button>
+            <p id="login-error"></p>
+            <a href="#" id="admin-login-link" style="display: block; margin-top: 1rem;">管理员入口</a>
+        </div>
+
+        <!-- 测试界面 -->
+        <div id="test-screen" class="hidden">
+            <p id="student-info"></p><div id="char-display">字</div><p id="status-text">点击下面的麦克风，大声读出这个字</p><button id="mic-btn">🎤</button><p id="progress-text"></p>
+        </div>
+
+        <!-- 报告界面 -->
+        <div id="report-screen" class="hidden">
+            <h2>测试报告</h2>
+            <div id="summary"></div>
+            <h3>错误列表</h3>
+            <div id="error-list">
+                <p id="no-errors" class="hidden">太棒了，全部正确！</p>
+                <table id="error-table" class="hidden">
+                    <thead>
+                        <tr>
+                            <th>汉字</th>
+                            <th>正确发音</th>
+                            <th>你的发音(识别结果)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <br>
+            <button id="restart-btn">重新测试</button>
+            <button id="download-btn" class="btn-success">下载Excel报告</button>
+        </div>
+
+        <!-- 管理员后台界面 -->
+        <div id="admin-screen" class="hidden">
+            <h1>管理员后台</h1>
+            <div class="form-group" id="admin-login-form">
+                <label for="admin-password">管理员密码:</label>
+                <input type="password" id="admin-password" placeholder="请输入密码">
+                <button id="admin-login-btn">登录</button>
+                <p id="admin-error"></p>
+            </div>
+            <div id="admin-panel" class="hidden" style="text-align: left;">
+                <h3>字库管理</h3>
+                <p>请上传 CSV 格式的字库文件 (格式: character,pinyins)。</p>
+                <input type="file" id="char-file-input" accept=".csv" style="margin: 1rem 0;">
+                <p id="upload-status" style="color: var(--success-color);"></p>
+                <hr style="margin: 1.5rem 0;">
+                <h3>当前字库状态</h3>
+                <div id="char-lib-status"></div>
+                <hr style="margin: 1.5rem 0;">
+                <button id="reset-lib-btn" class="btn-danger">清空自定义字库 (恢复默认)</button>
+                <button id="admin-logout-btn" class="btn-secondary" style="float: right;">退出登录</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // --- 数据模型 ---
+        const AppData = {
+            pinyinDict: {
+                '好': ['hao3'], '行': ['xing2', 'hang2'], '乐': ['le4', 'yue4'],
+                '为': ['wei2', 'wei4'], '中': ['zhong1', 'zhong4'],
+                '航': ['hang2'], '杭': ['hang2'], '悦': ['yue4'], '月': ['yue4'],
+                '喂': ['wei4'], '位': ['wei4'], '种': ['zhong3', 'zhong4']
+            },
+            students: [
+                { id: "101", name: "张小明" },
+                { id: "102", name: "李小红" },
+                { id: "1", name: "测试" }
+            ],
+            characters: [ // 这是默认字库
+                { character: "好", pinyins: ["hao3"] },
+                { character: "行", pinyins: ["xing2", "hang2"] },
+                { character: "乐", pinyins: ["le4", "yue4"] },
+                { character: "为", pinyins: ["wei2", "wei4"] },
+                { character: "中", pinyins: ["zhong1", "zhong4"] }
+            ],
+            state: {
+                currentUser: null,
+                testChars: [],
+                currentIndex: 0,
+                testResults: [],
+                feedbackDelay: 2000,
+                passScore: 60
+            },
+            admin: {
+                password: "admin", // 管理员密码
+                charLibKey: "custom_char_library" // localStorage 键名
+            },
+            storage: {
+                historyKey: 'literacy_test_history'
+            }
+        };
+        
+        // --- 工具函数 ---
+        const Utils = {
+            getPinyinsFromText(text) {
+                const pinyins = [];
+                for (const char of text) {
+                    if (AppData.pinyinDict[char]) {
+                        pinyins.push(...AppData.pinyinDict[char]);
+                    }
+                }
+                return [...new Set(pinyins)];
+            },
+            cleanRecognizedText(text) {
+                const cleanedPunctuation = text.trim().replace(/[。，？！.?,!]$/, '');
+                return cleanedPunctuation.replace(/[^\u4e00-\u9fa5]/g, '');
+            },
+            shuffleArray(array) {
+                return [...array].sort(() => 0.5 - Math.random());
+            },
+            formatDateTime(date) {
+                const d = date || new Date();
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            },
+            saveTestHistory(result) {
+                try {
+                    const history = JSON.parse(localStorage.getItem(AppData.storage.historyKey) || '[]');
+                    history.push({ ...result, timestamp: new Date().toISOString() });
+                    localStorage.setItem(AppData.storage.historyKey, JSON.stringify(history));
+                    return true;
+                } catch (e) {
+                    console.error('保存历史记录失败:', e);
+                    return false;
+                }
+            }
+        };
+        
+        // --- DOM元素 ---
+        const UI = {
+            screens: {
+                login: document.getElementById('login-screen'),
+                test: document.getElementById('test-screen'),
+                report: document.getElementById('report-screen'),
+                admin: document.getElementById('admin-screen')
+            },
+            login: {
+                idInput: document.getElementById('student-id'),
+                nameInput: document.getElementById('student-name'),
+                submitBtn: document.getElementById('login-btn'),
+                errorMsg: document.getElementById('login-error'),
+                adminLoginLink: document.getElementById('admin-login-link')
+            },
+            test: {
+                studentInfo: document.getElementById('student-info'),
+                charDisplay: document.getElementById('char-display'),
+                statusText: document.getElementById('status-text'),
+                micBtn: document.getElementById('mic-btn'),
+                progressText: document.getElementById('progress-text')
+            },
+            report: {
+                summary: document.getElementById('summary'),
+                noErrors: document.getElementById('no-errors'),
+                errorTable: document.getElementById('error-table'),
+                errorTableBody: document.querySelector('#error-table tbody'),
+                restartBtn: document.getElementById('restart-btn'),
+                downloadBtn: document.getElementById('download-btn')
+            },
+            admin: {
+                loginForm: document.getElementById('admin-login-form'),
+                passwordInput: document.getElementById('admin-password'),
+                loginBtn: document.getElementById('admin-login-btn'),
+                errorMsg: document.getElementById('admin-error'),
+                panel: document.getElementById('admin-panel'),
+                fileInput: document.getElementById('char-file-input'),
+                uploadStatus: document.getElementById('upload-status'),
+                libStatus: document.getElementById('char-lib-status'),
+                resetBtn: document.getElementById('reset-lib-btn'),
+                logoutBtn: document.getElementById('admin-logout-btn')
+            },
+            showScreen(screenName) {
+                Object.keys(this.screens).forEach(key => {
+                    this.screens[key].classList.add('hidden');
+                });
+                this.screens[screenName].classList.remove('hidden');
+            },
+            updateStatus(message, type = 'normal') {
+                const classMap = {
+                    normal: '', success: 'feedback-correct',
+                    error: 'feedback-incorrect', warning: 'feedback-warning'
+                };
+                const className = classMap[type] || '';
+                this.test.statusText.innerHTML = className ? `<span class="${className}">${message}</span>` : message;
+            }
+        };
+        
+        // --- 应用逻辑 ---
+        const App = {
+            init() {
+                if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+                    UI.login.errorMsg.textContent = '错误：您的浏览器不支持语音识别。';
+                    UI.login.submitBtn.disabled = true;
+                }
+                if (typeof XLSX === 'undefined') {
+                    console.error("SheetJS 库 (xlsx)未能加载，Excel下载功能将不可用。");
+                }
+                this.loadCustomCharLibrary();
+                this.bindEvents();
+            },
+            bindEvents() {
+                UI.login.submitBtn.addEventListener('click', () => this.handleLogin());
+                UI.login.nameInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') UI.login.submitBtn.click(); });
+                UI.test.micBtn.addEventListener('click', () => this.startSpeechRecognition());
+                UI.report.restartBtn.addEventListener('click', () => this.restartApp());
+                UI.report.downloadBtn.addEventListener('click', () => this.downloadReport());
+                // 管理员事件
+                UI.login.adminLoginLink.addEventListener('click', (e) => { e.preventDefault(); this.showAdminLogin(); });
+                UI.admin.loginBtn.addEventListener('click', () => this.handleAdminLogin());
+                UI.admin.fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
+                UI.admin.resetBtn.addEventListener('click', () => this.resetCharLibrary());
+                UI.admin.logoutBtn.addEventListener('click', () => this.restartApp());
+            },
+            handleLogin() {
+                const id = UI.login.idInput.value.trim();
+                const name = UI.login.nameInput.value.trim();
+                if (!id || !name) {
+                    UI.login.errorMsg.textContent = "学号和姓名不能为空！";
+                    return;
+                }
+                const foundUser = AppData.students.find(user => user.id === id && user.name === name);
+                if (foundUser) {
+                    AppData.state.currentUser = foundUser;
+                    UI.login.errorMsg.textContent = '';
+                    this.startTest();
+                } else {
+                    UI.login.errorMsg.textContent = "学号或姓名错误！";
+                }
+            },
+            startTest() {
+                AppData.state.currentIndex = 0;
+                AppData.state.testResults = [];
+                AppData.state.testChars = Utils.shuffleArray(AppData.characters);
+                if (AppData.state.testChars.length === 0) {
+                    alert("错误：题库为空，无法开始测试。请联系管理员上传字库。");
+                    this.restartApp();
+                    return;
+                }
+                UI.test.studentInfo.textContent = `学生: ${AppData.state.currentUser.name} (${AppData.state.currentUser.id})`;
+                UI.showScreen('test');
+                this.displayNextChar();
+            },
+            displayNextChar() {
+                const { currentIndex, testChars } = AppData.state;
+                if (currentIndex >= testChars.length) {
+                    this.showReport();
+                    return;
+                }
+                const currentWord = testChars[currentIndex];
+                UI.test.charDisplay.textContent = currentWord.character;
+                UI.test.progressText.textContent = `进度: ${currentIndex + 1} / ${testChars.length}`;
+                UI.updateStatus("准备好了吗？点击麦克风开始");
+                UI.test.micBtn.disabled = false;
+                UI.test.micBtn.textContent = '🎤';
+
+                // [新增] 预热语音识别
+                this.warmUpSpeechRecognition();
+            },
+            // [重写] 启动语音识别，增加更明确的UI反馈流程
+            startSpeechRecognition() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                const recognition = new SpeechRecognition();
+                recognition.lang = 'zh-CN';
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 3;
+
+                // 1. 点击后立即更新UI，进入“准备中”状态
+                UI.updateStatus("请稍候，正在启动麦克风...", "warning");
+                UI.test.micBtn.textContent = '...';
+                UI.test.micBtn.disabled = true;
+
+                // 2. 当API真正就绪时，提示用户“请说话”
+                recognition.onstart = () => {
+                    UI.updateStatus("请说话！", "success");
+                };
+                
+                // 3. 识别到结果
+                recognition.onresult = (e) => {
+                    this.checkAnswer(e.results[0][0].transcript);
+                };
+                
+                // 4. 处理错误
+                recognition.onerror = (e) => {
+                    let msg = "出错了，请再试一次", type = "warning";
+                    if (e.error === 'no-speech') {
+                         msg = "没有听到声音，请大声读出汉字";
+                    } else if (e.error === 'not-allowed') {
+                        msg = "未允许使用麦克风，请允许浏览器访问麦克风";
+                    } else if (e.error === 'network') {
+                        msg = "网络连接出错，请检查网络后重试";
+                    }
+                    
+                    UI.updateStatus(msg, type);
+
+                    // 错误发生后，延迟一段时间再显示下一个字
+                    setTimeout(() => {
+                        AppData.state.currentIndex++;
+                        this.displayNextChar();
+                    }, AppData.state.feedbackDelay);
+                };
+                
+                // 5. 启动识别
+                recognition.start();
+            },
+            checkAnswer(recognizedText) {
+                const cleanedText = Utils.cleanRecognizedText(recognizedText);
+                
+                if (!cleanedText) {
+                    UI.updateStatus("没有识别出有效汉字，请再试一次", "warning");
+                    setTimeout(() => {
+                        AppData.state.currentIndex++;
+                        this.displayNextChar();
+                    }, AppData.state.feedbackDelay);
+                    return;
+                }
+                const { currentIndex, testChars } = AppData.state;
+                const currentWord = testChars[currentIndex];
+                const expectedPinyins = currentWord.pinyins;
+                const recognizedPinyins = Utils.getPinyinsFromText(cleanedText);
+
+                let isCorrect = cleanedText === currentWord.character;
+                if (!isCorrect) {
+                     isCorrect = recognizedPinyins.length > 0 && expectedPinyins.some(p => recognizedPinyins.includes(p));
+                }
+                
+                AppData.state.testResults.push({
+                    character: currentWord.character, expected: expectedPinyins,
+                    recognized: recognizedText, isCorrect: isCorrect
+                });
+                
+                if (isCorrect) {
+                    UI.updateStatus("正确！✅", "success");
+                } else {
+                    UI.updateStatus(`不对哦！❌ <br>正确读音: ${expectedPinyins.join(' / ')}`, "error");
+                }
+                setTimeout(() => {
+                    AppData.state.currentIndex++;
+                    this.displayNextChar();
+                }, AppData.state.feedbackDelay);
+            },
+            showReport() {
+                UI.showScreen('report');
+                const { testResults, testChars, currentUser } = AppData.state;
+                const correctCount = testResults.filter(res => res.isCorrect).length;
+                const accuracy = (testChars.length > 0) ? (correctCount / testChars.length) * 100 : 0;
+                const isPassed = accuracy >= AppData.state.passScore;
+                
+                UI.report.summary.innerHTML = `<p><strong>${currentUser.name}</strong> 同学，测试完成！</p><p>测试时间: <strong>${Utils.formatDateTime()}</strong></p><p>总题数: <strong>${testChars.length}</strong></p><p>答对题数: <strong style="color:var(--success-color);">${correctCount}</strong></p><p>正确率: <strong style="color:${isPassed ? 'var(--success-color)' : 'var(--danger-color)'};">${accuracy.toFixed(0)}%</strong></p><p>测试结果: <strong style="color:${isPassed ? 'var(--success-color)' : 'var(--danger-color)'};">${isPassed ? '通过' : '需要加强'}</strong></p>`;
+                
+                const errors = testResults.filter(res => !res.isCorrect);
+                UI.report.errorTableBody.innerHTML = '';
+                
+                if (errors.length === 0) {
+                    UI.report.noErrors.classList.remove('hidden');
+                    UI.report.errorTable.classList.add('hidden');
+                } else {
+                    UI.report.noErrors.classList.add('hidden');
+                    UI.report.errorTable.classList.remove('hidden');
+                    errors.forEach(err => {
+                        UI.report.errorTableBody.innerHTML += `<tr><td>${err.character}</td><td>${err.expected.join(' / ')}</td><td>${err.recognized}</td></tr>`;
+                    });
+                }
+                
+                Utils.saveTestHistory({
+                    student: currentUser, date: Utils.formatDateTime(),
+                    totalCount: testChars.length, correctCount, accuracy: accuracy.toFixed(0),
+                    isPassed, results: testResults
+                });
+            },
+            restartApp() {
+                location.reload();
+            },
+            downloadReport() {
+                if (typeof XLSX === 'undefined') { alert("错误：无法生成 Excel 文件，相关库未能加载。"); return; }
+                const { currentUser, testResults, testChars } = AppData.state;
+                const correctCount = testResults.filter(res => res.isCorrect).length;
+                const accuracy = (testChars.length > 0) ? (correctCount / testChars.length) * 100 : 0;
+                const isPassed = accuracy >= AppData.state.passScore;
+                const errors = testResults.filter(res => !res.isCorrect);
+
+                const summaryData = [
+                    ["识字测试报告"], [], ["学生姓名", currentUser.name], ["学生学号", currentUser.id],
+                    ["测试时间", Utils.formatDateTime()], [], ["--- 测试摘要 ---"],
+                    ["总题数", testChars.length], ["答对题数", correctCount],
+                    ["正确率", `${accuracy.toFixed(0)}%`], ["测试结果", isPassed ? '通过' : '需要加强']
+                ];
+                const errorsData = [["汉字", "正确发音", "你的发音(识别结果)"]];
+                errors.forEach(err => errorsData.push([err.character, err.expected.join(' / '), err.recognized]));
+                if (errors.length === 0) errorsData.push(["太棒了，全部正确！"]);
+
+                const wb = XLSX.utils.book_new();
+                const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+                wsSummary['!cols'] = [{ wch: 20 }, { wch: 40 }];
+                wsSummary['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
+                XLSX.utils.book_append_sheet(wb, wsSummary, "测试摘要");
+                const wsErrors = XLSX.utils.aoa_to_sheet(errorsData);
+                wsErrors['!cols'] = [{ wch: 10 }, { wch: 25 }, { wch: 40 }];
+                XLSX.utils.book_append_sheet(wb, wsErrors, "错误列表");
+                XLSX.writeFile(wb, `识字测试报告-${currentUser.name}-${Utils.formatDateTime().split(' ')[0]}.xlsx`);
+            },
+            // --- 管理员功能相关函数 ---
+            loadCustomCharLibrary() {
+                try {
+                    const customLib = localStorage.getItem(AppData.admin.charLibKey);
+                    if (customLib) {
+                        const parsedLib = JSON.parse(customLib);
+                        if (Array.isArray(parsedLib) && parsedLib.length > 0) {
+                            AppData.characters = parsedLib;
+                            console.log(`已加载 ${parsedLib.length} 个自定义汉字。`);
+                        }
+                    }
+                } catch (e) { console.error("加载自定义字库失败:", e); }
+            },
+            showAdminLogin() {
+                UI.showScreen('admin');
+                UI.admin.panel.classList.add('hidden');
+                UI.admin.loginForm.classList.remove('hidden');
+                UI.admin.passwordInput.value = '';
+                UI.admin.errorMsg.textContent = '';
+            },
+            handleAdminLogin() {
+                if (UI.admin.passwordInput.value === AppData.admin.password) {
+                    UI.admin.errorMsg.textContent = '';
+                    UI.admin.panel.classList.remove('hidden');
+                    UI.admin.loginForm.classList.add('hidden');
+                    this.updateCharLibStatus();
+                } else {
+                    UI.admin.errorMsg.textContent = '密码错误！';
+                }
+            },
+            updateCharLibStatus() {
+                const count = AppData.characters.length;
+                const isDefault = JSON.stringify(AppData.characters) === JSON.stringify(this.getDefaultCharacters());
+                UI.admin.libStatus.innerHTML = `当前字库包含 <strong>${count}</strong> 个汉字。<br>状态: <strong>${isDefault ? '默认字库' : '自定义字库'}</strong>`;
+                UI.admin.uploadStatus.textContent = '';
+            },
+            getDefaultCharacters() {
+                return [
+                    { character: "好", pinyins: ["hao3"] }, { character: "行", pinyins: ["xing2", "hang2"] },
+                    { character: "乐", pinyins: ["le4", "yue4"] }, { character: "为", pinyins: ["wei2", "wei4"] },
+                    { character: "中", pinyins: ["zhong1", "zhong4"] }
+                ];
+            },
+            handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => this.parseAndSaveCharLibrary(e.target.result);
+                reader.readAsText(file, 'UTF-8');
+            },
+            parseAndSaveCharLibrary(csvText) {
+                try {
+                    const lines = csvText.trim().split(/\r?\n/);
+                    if (lines.length < 2 || lines[0].trim().toLowerCase() !== 'character,pinyins') {
+                        throw new Error("CSV格式错误，第一行表头必须是 'character,pinyins'");
+                    }
+                    const newLib = [];
+                    for (let i = 1; i < lines.length; i++) {
+                        const parts = lines[i].split(',');
+                        if (parts.length >= 2) {
+                            const character = parts[0].trim();
+                            const pinyinsStr = parts[1].trim();
+                            if (character && pinyinsStr) {
+                                newLib.push({ character: character, pinyins: pinyinsStr.split('/') });
+                            }
+                        }
+                    }
+                    if (newLib.length === 0) throw new Error("未能从文件中解析出任何汉字数据。");
+
+                    localStorage.setItem(AppData.admin.charLibKey, JSON.stringify(newLib));
+                    AppData.characters = newLib;
+                    UI.admin.uploadStatus.style.color = 'var(--success-color)';
+                    UI.admin.uploadStatus.textContent = `成功上传并应用了 ${newLib.length} 个汉字！`;
+                    this.updateCharLibStatus();
+                } catch (e) {
+                    UI.admin.uploadStatus.style.color = 'var(--danger-color)';
+                    UI.admin.uploadStatus.textContent = `上传失败: ${e.message}`;
+                } finally {
+                    UI.admin.fileInput.value = '';
+                }
+            },
+            resetCharLibrary() {
+                if (confirm("确定要清空自定义字库并恢复为系统默认字库吗？")) {
+                    localStorage.removeItem(AppData.admin.charLibKey);
+                    AppData.characters = this.getDefaultCharacters();
+                    UI.admin.uploadStatus.textContent = "已恢复为默认字库。";
+                    this.updateCharLibStatus();
+                }
+            },
+            // [新增] 预热语音识别API，减少冷启动延迟
+            warmUpSpeechRecognition() {
+                try {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    const recognition = new SpeechRecognition();
+                    recognition.lang = 'zh-CN';
+                    // 立即开始然后立即停止，这通常足以触发API预热
+                    recognition.start();
+                    setTimeout(() => {
+                        recognition.stop();
+                    }, 100); // 短暂运行后停止
+                } catch (e) {
+                    // 预热失败是无声的，不打扰用户
+                    console.warn("Speech recognition warm-up failed:", e);
+                }
+            }
+        };
+        
+        document.addEventListener('DOMContentLoaded', () => App.init());
+    </script>
+</body>
+</html>
