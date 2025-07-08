@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>识字测试系统 (V18 - 随机抽查版)</title>
+    <title>识字测试系统 (V19.1 - 稳定网络版)</title>
+    <!-- [修改] 更换为更稳定的 jsDelivr CDN 源 -->
+    <script src="https://unpkg.com/pinyin-pro@3.26.0/dist/index.js"></script>
     <!-- 引入 SheetJS 库，用于生成 Excel 文件 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -277,12 +279,7 @@
     <script>
         // --- 数据模型 ---
         const AppData = {
-            pinyinDict: {
-                '好': ['hao3'], '行': ['xing2', 'hang2'], '乐': ['le4', 'yue4'],
-                '为': ['wei2', 'wei4'], '中': ['zhong1', 'zhong4'],
-                '航': ['hang2'], '杭': ['hang2'], '悦': ['yue4'], '月': ['yue4'],
-                '喂': ['wei4'], '位': ['wei4'], '种': ['zhong3', 'zhong4']
-            },
+            /* pinyinDict 不再需要，由 pinyin-pro 库替代 */
             students: [
                 { id: "101", name: "张小明" },
                 { id: "102", name: "李小红" },
@@ -315,12 +312,11 @@
         // --- 工具函数 ---
         const Utils = {
             getPinyinsFromText(text) {
-                const pinyins = [];
-                for (const char of text) {
-                    if (AppData.pinyinDict[char]) {
-                        pinyins.push(...AppData.pinyinDict[char]);
-                    }
+                if (typeof pinyinPro === 'undefined') {
+                    console.error("pinyin-pro 库未加载，无法获取拼音。");
+                    return [];
                 }
+                const pinyins = pinyinPro.pinyin(text, { toneType: 'num', type: 'array' });
                 return [...new Set(pinyins)];
             },
             cleanRecognizedText(text) {
@@ -412,6 +408,10 @@
                     UI.login.errorMsg.textContent = '错误：您的浏览器不支持语音识别。';
                     UI.login.submitBtn.disabled = true;
                 }
+                if (typeof pinyinPro === 'undefined') {
+                    console.error("pinyin-pro 库未能加载，拼音识别功能将受限。");
+                    alert("错误：拼音支持库未能加载，请检查网络连接并刷新页面。");
+                }
                 if (typeof XLSX === 'undefined') {
                     console.error("SheetJS 库 (xlsx)未能加载，Excel下载功能将不可用。");
                 }
@@ -451,12 +451,10 @@
                 AppData.state.currentIndex = 0;
                 AppData.state.testResults = [];
                 
-                // [核心修改] 打乱字库后，只取前5个字进行测试
                 const shuffledLibrary = Utils.shuffleArray(AppData.characters);
-                const testSize = 5; // 定义每次测试的汉字数量
+                const testSize = 5;
                 AppData.state.testChars = shuffledLibrary.slice(0, testSize);
 
-                // 增加一个判断，如果总字库不足5个，则按实际数量测试
                 if (AppData.characters.length < testSize) {
                      AppData.state.testChars = shuffledLibrary;
                      console.warn(`字库总数 (${AppData.characters.length}) 小于设定的测试数量 (${testSize})，将测试所有字。`);
