@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>识字测试系统 (V19.1 - 稳定网络版)</title>
+    <title>识字测试系统 (V20 - 报告增强版)</title>
     <!-- [修改] 更换为更稳定的 jsDelivr CDN 源 -->
-    <script src="https://unpkg.com/pinyin-pro@3.26.0/dist/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.5/dist/pinyin-pro.js"></script>
     <!-- 引入 SheetJS 库，用于生成 Excel 文件 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -316,7 +316,8 @@
                     console.error("pinyin-pro 库未加载，无法获取拼音。");
                     return [];
                 }
-                const pinyins = pinyinPro.pinyin(text, { toneType: 'num', type: 'array' });
+                const { pinyin } = pinyinPro;
+                const pinyins = pinyin(text, { toneType: 'num', type: 'array' });
                 return [...new Set(pinyins)];
             },
             cleanRecognizedText(text) {
@@ -546,8 +547,8 @@
                 const currentWord = testChars[currentIndex];
                 const expectedPinyins = currentWord.pinyins;
                 
-                let isCorrect = cleanedText.startsWith(currentWord.character) || 
-                                cleanedText.includes(currentWord.character);
+                // [修改] 移除了 startsWith 判断
+                let isCorrect = cleanedText.includes(currentWord.character);
 
                 if (!isCorrect) {
                     const recognizedPinyins = Utils.getPinyinsFromText(cleanedText);
@@ -610,7 +611,19 @@
                 const correctCount = testResults.filter(res => res.isCorrect).length;
                 const accuracy = (testChars.length > 0) ? (correctCount / testChars.length) * 100 : 0;
                 const isPassed = accuracy >= AppData.state.passScore;
+                
                 const errors = testResults.filter(res => !res.isCorrect);
+                const errorsData = [["汉字", "正确发音", "你的发音(识别结果)"]];
+                errors.forEach(err => errorsData.push([err.character, err.expected.join(' / '), err.recognized]));
+                if (errors.length === 0) errorsData.push(["太棒了，全部正确！"]);
+
+                // [新增] 创建正确列表的数据
+                const correctList = testResults.filter(res => res.isCorrect);
+                const correctData = [["汉字", "正确发音", "你的发音(识别结果)"]];
+                correctList.forEach(item => {
+                    correctData.push([item.character, item.expected.join(' / '), item.recognized]);
+                });
+                if (correctList.length === 0) correctData.push(["本次没有答对的题目。"]);
 
                 const summaryData = [
                     ["识字测试报告"], [], ["学生姓名", currentUser.name], ["学生学号", currentUser.id],
@@ -618,18 +631,23 @@
                     ["总题数", testChars.length], ["答对题数", correctCount],
                     ["正确率", `${accuracy.toFixed(0)}%`], ["测试结果", isPassed ? '通过' : '需要加强']
                 ];
-                const errorsData = [["汉字", "正确发音", "你的发音(识别结果)"]];
-                errors.forEach(err => errorsData.push([err.character, err.expected.join(' / '), err.recognized]));
-                if (errors.length === 0) errorsData.push(["太棒了，全部正确！"]);
 
                 const wb = XLSX.utils.book_new();
+
                 const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
                 wsSummary['!cols'] = [{ wch: 20 }, { wch: 40 }];
                 wsSummary['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
                 XLSX.utils.book_append_sheet(wb, wsSummary, "测试摘要");
+
                 const wsErrors = XLSX.utils.aoa_to_sheet(errorsData);
                 wsErrors['!cols'] = [{ wch: 10 }, { wch: 25 }, { wch: 40 }];
                 XLSX.utils.book_append_sheet(wb, wsErrors, "错误列表");
+
+                // [新增] 添加正确列表到Excel
+                const wsCorrect = XLSX.utils.aoa_to_sheet(correctData);
+                wsCorrect['!cols'] = [{ wch: 10 }, { wch: 25 }, { wch: 40 }];
+                XLSX.utils.book_append_sheet(wb, wsCorrect, "正确列表");
+
                 XLSX.writeFile(wb, `识字测试报告-${currentUser.name}-${Utils.formatDateTime().split(' ')[0]}.xlsx`);
             },
             // --- 管理员功能相关函数 ---
