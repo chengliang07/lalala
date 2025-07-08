@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>识字测试系统 (V17 - 智能增强版)</title>
+    <title>识字测试系统 (V18 - 随机抽查版)</title>
     <!-- 引入 SheetJS 库，用于生成 Excel 文件 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -450,8 +450,18 @@
             startTest() {
                 AppData.state.currentIndex = 0;
                 AppData.state.testResults = [];
-                // 只抽取5个汉字进行测试
-                AppData.state.testChars = Utils.shuffleArray(AppData.characters).slice(0, 5);
+                
+                // [核心修改] 打乱字库后，只取前5个字进行测试
+                const shuffledLibrary = Utils.shuffleArray(AppData.characters);
+                const testSize = 5; // 定义每次测试的汉字数量
+                AppData.state.testChars = shuffledLibrary.slice(0, testSize);
+
+                // 增加一个判断，如果总字库不足5个，则按实际数量测试
+                if (AppData.characters.length < testSize) {
+                     AppData.state.testChars = shuffledLibrary;
+                     console.warn(`字库总数 (${AppData.characters.length}) 小于设定的测试数量 (${testSize})，将测试所有字。`);
+                }
+
                 if (AppData.state.testChars.length === 0) {
                     alert("错误：题库为空，无法开始测试。请联系管理员上传字库。");
                     this.restartApp();
@@ -571,7 +581,7 @@
                 const accuracy = (testChars.length > 0) ? (correctCount / testChars.length) * 100 : 0;
                 const isPassed = accuracy >= AppData.state.passScore;
                 
-                UI.report.summary.innerHTML = `<p><strong>${currentUser.name}</strong> 同学，测试完成！</p><p>测试时间: <strong>${Utils.formatDateTime()}</strong></p><p>总题数: <strong>${testChars.length}</strong> ，正确数: <strong>${correctCount}</strong></p><p>正确率: <strong>${accuracy.toFixed(0)}%</strong>，${isPassed ? '通过！' : '需要加强~'}</p>`;
+                UI.report.summary.innerHTML = `<p><strong>${currentUser.name}</strong> 同学，测试完成！</p><p>测试时间: <strong>${Utils.formatDateTime()}</strong></p><p>总题数: <strong>${testChars.length}</strong></p><p>答对题数: <strong style="color:var(--success-color);">${correctCount}</strong></p><p>正确率: <strong style="color:${isPassed ? 'var(--success-color)' : 'var(--danger-color)'};">${accuracy.toFixed(0)}%</strong></p><p>测试结果: <strong style="color:${isPassed ? 'var(--success-color)' : 'var(--danger-color)'};">${isPassed ? '通过' : '需要加强'}</strong></p>`;
                 
                 const errors = testResults.filter(res => !res.isCorrect);
                 UI.report.errorTableBody.innerHTML = '';
