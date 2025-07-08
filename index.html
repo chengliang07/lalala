@@ -450,7 +450,8 @@
             startTest() {
                 AppData.state.currentIndex = 0;
                 AppData.state.testResults = [];
-                AppData.state.testChars = Utils.shuffleArray(AppData.characters);
+                // 只抽取5个汉字进行测试
+                AppData.state.testChars = Utils.shuffleArray(AppData.characters).slice(0, 5);
                 if (AppData.state.testChars.length === 0) {
                     alert("错误：题库为空，无法开始测试。请联系管理员上传字库。");
                     this.restartApp();
@@ -570,7 +571,7 @@
                 const accuracy = (testChars.length > 0) ? (correctCount / testChars.length) * 100 : 0;
                 const isPassed = accuracy >= AppData.state.passScore;
                 
-                UI.report.summary.innerHTML = `<p><strong>${currentUser.name}</strong> 同学，测试完成！</p><p>测试时间: <strong>${Utils.formatDateTime()}</strong></p><p>总题数: <strong>${testChars.length}</strong></p><p>答对题数: <strong style="color:var(--success-color);">${correctCount}</strong></p><p>正确率: <strong style="color:${isPassed ? 'var(--success-color)' : 'var(--danger-color)'};">${accuracy.toFixed(0)}%</strong></p><p>测试结果: <strong style="color:${isPassed ? 'var(--success-color)' : 'var(--danger-color)'};">${isPassed ? '通过' : '需要加强'}</strong></p>`;
+                UI.report.summary.innerHTML = `<p><strong>${currentUser.name}</strong> 同学，测试完成！</p><p>测试时间: <strong>${Utils.formatDateTime()}</strong></p><p>总题数: <strong>${testChars.length}</strong> ，正确数: <strong>${correctCount}</strong></p><p>正确率: <strong>${accuracy.toFixed(0)}%</strong>，${isPassed ? '通过！' : '需要加强~'}</p>`;
                 
                 const errors = testResults.filter(res => !res.isCorrect);
                 UI.report.errorTableBody.innerHTML = '';
